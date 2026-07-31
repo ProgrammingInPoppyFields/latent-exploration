@@ -142,22 +142,18 @@
   }
 
   /* vertical light-beam glow, counter-rotated so it always points "up"
-     regardless of a node's angular position in the radial layout */
+     regardless of a node's angular position in the radial layout.
+     fade-to-transparent comes from the SVG gradient fills defined in
+     <defs> (#beam-grad-path / #beam-grad-current), not CSS masking -
+     a plain zero-width <line> has a degenerate bounding box that
+     breaks CSS mask-image in some browsers, so these are <rect>s. */
   .beam {
     opacity: 0;
     pointer-events: none;
-    mask-image: linear-gradient(to top, black, transparent 88%);
-    -webkit-mask-image: linear-gradient(to top, black, transparent 88%);
     transition: opacity 0.2s ease;
   }
   .beam-glow {
-    stroke-width: 9px;
-    stroke-linecap: round;
     filter: blur(5px);
-  }
-  .beam-core {
-    stroke-width: 1.6px;
-    stroke-linecap: round;
   }
   .node.on-path:not(.selected) .beam,
   .node.hover-path:not(:hover) .beam {
@@ -167,7 +163,7 @@
   .node.on-path:not(.selected) .beam-core,
   .node.hover-path:not(:hover) .beam-glow,
   .node.hover-path:not(:hover) .beam-core {
-    stroke: var(--path);
+    fill: url(#beam-grad-path);
   }
   .node.selected .beam,
   .node.real:hover .beam {
@@ -177,7 +173,7 @@
   .node.selected .beam-core,
   .node.real:hover .beam-glow,
   .node.real:hover .beam-core {
-    stroke: var(--current);
+    fill: url(#beam-grad-current);
   }
   .node.root.on-path .beam,
   .node.root.hover-path .beam,
@@ -193,7 +189,7 @@
   .node.root:hover .beam-core,
   .node.root.active .beam-glow,
   .node.root.active .beam-core {
-    stroke: var(--current);
+    fill: url(#beam-grad-current);
   }
 
   #sidebar {
@@ -377,6 +373,17 @@ function init(data) {
   rootHierarchy = d3.hierarchy(data.nodes[data.root], d => d.children.map(cid => data.nodes[cid]));
 
   svg = d3.select("#graph");
+  const defs = svg.append("defs");
+  const beamGradient = (id, color, maxOpacity) => {
+    const grad = defs.append("linearGradient")
+      .attr("id", id)
+      .attr("x1", "0").attr("y1", "0").attr("x2", "0").attr("y2", "1");
+    grad.append("stop").attr("offset", "0%").attr("stop-color", color).attr("stop-opacity", 0);
+    grad.append("stop").attr("offset", "100%").attr("stop-color", color).attr("stop-opacity", maxOpacity);
+  };
+  beamGradient("beam-grad-path", "#6ee7ff", 0.9);
+  beamGradient("beam-grad-current", "#ffffff", 1);
+
   g = svg.append("g");
 
   zoom = d3.zoom()
@@ -503,15 +510,21 @@ function draw() {
     .attr("class", "beam")
     .attr("transform", d => `rotate(${90 - (d.x * 180 / Math.PI)})`);
 
-  beamG.append("line")
+  beamG.append("rect")
     .attr("class", "beam-glow")
-    .attr("x1", 0).attr("y1", 0)
-    .attr("x2", 0).attr("y2", d => -beamLength(d));
+    .attr("x", -5)
+    .attr("y", d => -beamLength(d))
+    .attr("width", 10)
+    .attr("height", beamLength)
+    .attr("rx", 5);
 
-  beamG.append("line")
+  beamG.append("rect")
     .attr("class", "beam-core")
-    .attr("x1", 0).attr("y1", 0)
-    .attr("x2", 0).attr("y2", d => -beamLength(d));
+    .attr("x", -1)
+    .attr("y", d => -beamLength(d))
+    .attr("width", 2)
+    .attr("height", beamLength)
+    .attr("rx", 1);
 
   if (selectedId) applyHighlight(selectedId);
 
