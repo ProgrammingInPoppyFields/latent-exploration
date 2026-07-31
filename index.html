@@ -14,7 +14,7 @@
     --node-virtual: #3a3a4a;
     --node-selected: #ff6ec7;
     --path: #ff6ec7;
-    --root: #ffcc66;
+    --root: #ffffff;
     --text: #e8e8f0;
     --text-dim: #8888a0;
     --accent: #6ee7ff;
@@ -91,14 +91,14 @@
     filter: drop-shadow(0 0 10px var(--node-real));
   }
   .node.root circle {
+    fill: var(--root);
     stroke: var(--root);
     stroke-width: 4px;
-    filter: drop-shadow(0 0 10px var(--root));
     cursor: pointer;
   }
-  .node.root:hover circle {
-    fill: var(--root);
-    filter: drop-shadow(0 0 26px var(--root));
+  .node.root:hover circle,
+  .node.root.active circle {
+    filter: drop-shadow(0 0 18px var(--root)) drop-shadow(0 0 34px var(--root));
   }
 
   #sidebar {
@@ -237,6 +237,7 @@ const childrenEl = document.getElementById("children-list");
 const statsEl = document.getElementById("stats-footer");
 
 let selectedId = null;
+let originActive = false;
 let nodeById = {};
 let rootHierarchy = null;
 let svg, g, zoom;
@@ -265,10 +266,10 @@ function init(data) {
 }
 
 function nodeRadius(d) {
+  if (d.depth === 0) return 40;
   const base = d.data.virtual ? 5 : 7;
-  const childBonus = Math.min(d.data.children.length, 8) * 2.2;
-  const rootBonus = d.depth === 0 ? 6 : 0;
-  return base + childBonus + rootBonus;
+  const childBonus = Math.min(d.data.children.length, 6) * 1.8;
+  return base + childBonus;
 }
 
 function showOriginImage() {
@@ -278,6 +279,7 @@ function showOriginImage() {
 }
 
 function hideOriginImage() {
+  if (originActive) return;
   originImgEl.style.display = "none";
   if (selectedId) {
     videoEl.style.display = "block";
@@ -287,12 +289,46 @@ function hideOriginImage() {
   }
 }
 
+function selectRoot() {
+  selectedId = null;
+  originActive = true;
+  videoEl.pause();
+  d3.selectAll(".node").classed("selected", false).classed("on-path", false).classed("active", false);
+  d3.selectAll(".link").classed("on-path", false);
+  d3.select("#node-0").classed("active", true);
+  showOriginImage();
+
+  const root = nodeById["0"];
+  infoEl.innerHTML = `
+    <div class="id">Origin</div>
+    <div class="stat-row"><span>Children</span><span>${root.children.length}</span></div>
+  `;
+  childrenEl.innerHTML = "";
+  if (root.children.length) {
+    const label = document.createElement("div");
+    label.style.cssText = "font-size:11px;color:var(--text-dim);margin-bottom:6px;";
+    label.textContent = "Branches from here:";
+    childrenEl.appendChild(label);
+    root.children.forEach(cid => {
+      const c = nodeById[cid];
+      const btn = document.createElement("button");
+      btn.textContent = `${cid.split("_").pop()} → ${cid}${c.virtual ? "  (no clip)" : ""}${c.label ? `  "${c.label}"` : ""}`;
+      btn.onclick = () => (!c.virtual ? selectNode(cid) : null);
+      childrenEl.appendChild(btn);
+    });
+  }
+}
+
 function layoutRadial(root) {
-  const radius = Math.max(root.height, 1) * 26 + 40;
+  const innerRadius = 110; // clearance around the big origin node
+  const ringStep = 48;
+  const availableRadius = Math.max(root.height, 1) * ringStep;
   d3.tree()
-    .size([2 * Math.PI, radius])
-    .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth)(root);
-  const size = radius * 2 + 120;
+    .size([2 * Math.PI, availableRadius])
+    .separation((a, b) => (a.parent === b.parent ? 1.6 : 3.2) / a.depth)(root);
+  root.each(d => { if (d.depth > 0) d.y += innerRadius; });
+  const totalRadius = availableRadius + innerRadius + 60;
+  const size = totalRadius * 2;
   return { width: size, height: size, translate: [size / 2, size / 2] };
 }
 
@@ -301,7 +337,6 @@ function draw() {
 
   const { width, height, translate } = layoutRadial(rootHierarchy);
 
-  svg.attr("viewBox", [0, 0, width, height]);
   g.attr("transform", `translate(${translate[0]},${translate[1]})`);
 
   const linkPath = d3.linkRadial().angle(d => d.x).radius(d => d.y);
@@ -320,7 +355,10 @@ function draw() {
     .attr("class", d => `node ${d.data.virtual ? "virtual" : "real"}${d.depth === 0 ? " root" : ""}`)
     .attr("id", d => `node-${d.data.id}`)
     .attr("transform", nodeTransform)
-    .on("click", (event, d) => { if (!d.data.virtual) selectNode(d.data.id); })
+    .on("click", (event, d) => {
+      if (d.depth === 0) selectRoot();
+      else if (!d.data.virtual) selectNode(d.data.id);
+    })
     .on("mouseenter", (event, d) => {
       if (d.depth === 0) showOriginImage();
       else if (!d.data.virtual) applyHoverPath(d.data.id);
@@ -359,7 +397,7 @@ function clearHoverPath() {
 }
 
 function applyHighlight(id) {
-  d3.selectAll(".node").classed("selected", false).classed("on-path", false);
+  d3.selectAll(".node").classed("selected", false).classed("on-path", false).classed("active", false);
   d3.selectAll(".link").classed("on-path", false);
   let cur = nodeById[id];
   const chain = [];
@@ -373,6 +411,8 @@ function applyHighlight(id) {
 
 function selectNode(id) {
   selectedId = id;
+  originActive = false;
+  originImgEl.style.display = "none";
   const n = nodeById[id];
   applyHighlight(id);
 
