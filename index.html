@@ -150,29 +150,34 @@
   .beam {
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.3s ease;
+  }
+  .beam-halo {
+    filter: blur(18px);
+    opacity: 0.4;
   }
   .beam-glow {
     filter: blur(8px);
+    opacity: 0.8;
   }
   .node.on-path:not(.selected) .beam,
   .node.hover-path:not(:hover) .beam {
     opacity: 0.85;
   }
+  .node.on-path:not(.selected) .beam-halo,
   .node.on-path:not(.selected) .beam-glow,
-  .node.on-path:not(.selected) .beam-core,
-  .node.hover-path:not(:hover) .beam-glow,
-  .node.hover-path:not(:hover) .beam-core {
+  .node.hover-path:not(:hover) .beam-halo,
+  .node.hover-path:not(:hover) .beam-glow {
     fill: url(#beam-grad-path);
   }
   .node.selected .beam,
   .node.real:hover .beam {
     opacity: 1;
   }
+  .node.selected .beam-halo,
   .node.selected .beam-glow,
-  .node.selected .beam-core,
-  .node.real:hover .beam-glow,
-  .node.real:hover .beam-core {
+  .node.real:hover .beam-halo,
+  .node.real:hover .beam-glow {
     fill: url(#beam-grad-current);
   }
   .node.root.on-path .beam,
@@ -181,14 +186,14 @@
   .node.root.active .beam {
     opacity: 1;
   }
+  .node.root.on-path .beam-halo,
   .node.root.on-path .beam-glow,
-  .node.root.on-path .beam-core,
+  .node.root.hover-path .beam-halo,
   .node.root.hover-path .beam-glow,
-  .node.root.hover-path .beam-core,
+  .node.root:hover .beam-halo,
   .node.root:hover .beam-glow,
-  .node.root:hover .beam-core,
-  .node.root.active .beam-glow,
-  .node.root.active .beam-core {
+  .node.root.active .beam-halo,
+  .node.root.active .beam-glow {
     fill: url(#beam-grad-current);
   }
 
@@ -381,8 +386,8 @@ function init(data) {
     grad.append("stop").attr("offset", "0%").attr("stop-color", color).attr("stop-opacity", 0);
     grad.append("stop").attr("offset", "100%").attr("stop-color", color).attr("stop-opacity", maxOpacity);
   };
-  beamGradient("beam-grad-path", "#6ee7ff", 0.9);
-  beamGradient("beam-grad-current", "#ffffff", 1);
+  beamGradient("beam-grad-path", "#6ee7ff", 0.55);
+  beamGradient("beam-grad-current", "#ffffff", 0.8);
 
   g = svg.append("g");
 
@@ -407,15 +412,15 @@ function nodeRadius(d) {
 }
 
 function beamLength(d) {
-  return nodeRadius(d) * 2.4;
-}
-
-function beamCoreWidth(d) {
-  return nodeRadius(d) * 1.5;
+  return nodeRadius(d) * 4.5;
 }
 
 function beamGlowWidth(d) {
-  return nodeRadius(d) * 2.6;
+  return nodeRadius(d) * 1.8;
+}
+
+function beamHaloWidth(d) {
+  return nodeRadius(d) * 3.6;
 }
 
 function showOriginImage() {
@@ -519,20 +524,20 @@ function draw() {
     .attr("transform", d => `rotate(${90 - (d.x * 180 / Math.PI)})`);
 
   beamG.append("rect")
+    .attr("class", "beam-halo")
+    .attr("x", d => -beamHaloWidth(d) / 2)
+    .attr("y", d => -beamLength(d))
+    .attr("width", beamHaloWidth)
+    .attr("height", beamLength)
+    .attr("rx", d => beamHaloWidth(d) / 2);
+
+  beamG.append("rect")
     .attr("class", "beam-glow")
     .attr("x", d => -beamGlowWidth(d) / 2)
     .attr("y", d => -beamLength(d))
     .attr("width", beamGlowWidth)
     .attr("height", beamLength)
     .attr("rx", d => beamGlowWidth(d) / 2);
-
-  beamG.append("rect")
-    .attr("class", "beam-core")
-    .attr("x", d => -beamCoreWidth(d) / 2)
-    .attr("y", d => -beamLength(d))
-    .attr("width", beamCoreWidth)
-    .attr("height", beamLength)
-    .attr("rx", d => beamCoreWidth(d) / 2);
 
   if (selectedId) applyHighlight(selectedId);
 
