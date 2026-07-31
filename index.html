@@ -41,12 +41,12 @@
     height: 100%;
     display: block;
     cursor: grab;
-    transform: rotateX(65deg);
+    transform: none;
     transform-origin: 50% 50%;
     transition: transform 0.5s ease;
   }
   #graph:active { cursor: grabbing; }
-  #graph-wrap.flat #graph { transform: none; }
+  #graph-wrap.tilted #graph { transform: rotateX(65deg); }
 
   #view-toggle {
     position: absolute;
@@ -149,16 +149,19 @@
   .node.hover-path:not(:hover) circle {
     fill: var(--path);
     stroke: var(--path);
+    filter: drop-shadow(0 0 6px var(--path));
   }
   .node.selected circle,
   .node.real:hover circle {
     fill: var(--current);
     stroke: var(--current);
+    filter: drop-shadow(0 0 14px var(--current));
   }
   .node.root.on-path circle,
   .node.root.hover-path circle {
     fill: var(--current);
     stroke: var(--current);
+    filter: drop-shadow(0 0 16px var(--current));
   }
   .node.root circle {
     fill: none;
@@ -170,62 +173,7 @@
   .node.root:hover circle,
   .node.root.active circle {
     fill: var(--root);
-  }
-
-  /* vertical light-beam glow, counter-rotated so it always points "up"
-     regardless of a node's angular position in the radial layout.
-     fade-to-transparent comes from the SVG gradient fills defined in
-     <defs> (#beam-grad-path / #beam-grad-current), not CSS masking -
-     a plain zero-width <line> has a degenerate bounding box that
-     breaks CSS mask-image in some browsers, so these are <rect>s. */
-  .beam {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-  }
-  .beam-halo {
-    filter: blur(18px);
-    opacity: 0.4;
-  }
-  .beam-glow {
-    filter: blur(8px);
-    opacity: 0.8;
-  }
-  .node.on-path:not(.selected) .beam,
-  .node.hover-path:not(:hover) .beam {
-    opacity: 0.85;
-  }
-  .node.on-path:not(.selected) .beam-halo,
-  .node.on-path:not(.selected) .beam-glow,
-  .node.hover-path:not(:hover) .beam-halo,
-  .node.hover-path:not(:hover) .beam-glow {
-    fill: url(#beam-grad-path);
-  }
-  .node.selected .beam,
-  .node.real:hover .beam {
-    opacity: 1;
-  }
-  .node.selected .beam-halo,
-  .node.selected .beam-glow,
-  .node.real:hover .beam-halo,
-  .node.real:hover .beam-glow {
-    fill: url(#beam-grad-current);
-  }
-  .node.root.on-path .beam,
-  .node.root.hover-path .beam,
-  .node.root:hover .beam,
-  .node.root.active .beam {
-    opacity: 1;
-  }
-  .node.root.on-path .beam-halo,
-  .node.root.on-path .beam-glow,
-  .node.root.hover-path .beam-halo,
-  .node.root.hover-path .beam-glow,
-  .node.root:hover .beam-halo,
-  .node.root:hover .beam-glow,
-  .node.root.active .beam-halo,
-  .node.root.active .beam-glow {
-    fill: url(#beam-grad-current);
+    filter: drop-shadow(0 0 18px var(--root)) drop-shadow(0 0 34px var(--root));
   }
 
   #sidebar {
@@ -355,8 +303,8 @@
     <svg id="graph"></svg>
     <div id="sidebar-toggle">‹</div>
     <div id="view-toggle">
-      <button data-view="3d" class="active">3D</button>
-      <button data-view="2d">2D</button>
+      <button data-view="3d">3D</button>
+      <button data-view="2d" class="active">2D</button>
     </div>
   </div>
   <div id="sidebar">
@@ -390,9 +338,6 @@ const sidebarToggleEl = document.getElementById("sidebar-toggle");
 const graphWrapEl = document.getElementById("graph-wrap");
 const viewToggleEl = document.getElementById("view-toggle");
 
-const TILT_DEG = 65; // must match #graph's rotateX() in CSS
-const TILT_COMPENSATION = 1 / Math.cos(TILT_DEG * Math.PI / 180);
-
 let selectedId = null;
 let originActive = false;
 let nodeById = {};
@@ -413,7 +358,7 @@ viewToggleEl.querySelectorAll("button").forEach(btn => {
   btn.addEventListener("click", () => {
     viewToggleEl.querySelectorAll("button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    graphWrapEl.classList.toggle("flat", btn.dataset.view === "2d");
+    graphWrapEl.classList.toggle("tilted", btn.dataset.view === "3d");
   });
 });
 
@@ -426,17 +371,6 @@ function init(data) {
   rootHierarchy = d3.hierarchy(data.nodes[data.root], d => d.children.map(cid => data.nodes[cid]));
 
   svg = d3.select("#graph");
-  const defs = svg.append("defs");
-  const beamGradient = (id, color, maxOpacity) => {
-    const grad = defs.append("linearGradient")
-      .attr("id", id)
-      .attr("x1", "0").attr("y1", "0").attr("x2", "0").attr("y2", "1");
-    grad.append("stop").attr("offset", "0%").attr("stop-color", color).attr("stop-opacity", 0);
-    grad.append("stop").attr("offset", "100%").attr("stop-color", color).attr("stop-opacity", maxOpacity);
-  };
-  beamGradient("beam-grad-path", "#6ee7ff", 0.55);
-  beamGradient("beam-grad-current", "#ffffff", 0.8);
-
   g = svg.append("g");
 
   zoom = d3.zoom()
@@ -457,18 +391,6 @@ function nodeRadius(d) {
   const base = d.data.virtual ? 5 : 7;
   const childBonus = Math.min(d.data.children.length, 6) * 1.8;
   return base + childBonus;
-}
-
-function beamLength(d) {
-  return nodeRadius(d) * 4.5;
-}
-
-function beamGlowWidth(d) {
-  return nodeRadius(d) * 1.8;
-}
-
-function beamHaloWidth(d) {
-  return nodeRadius(d) * 3.6;
 }
 
 function showOriginImage() {
@@ -567,35 +489,11 @@ function draw() {
 
   node.append("circle").attr("r", nodeRadius);
 
-  const beamG = node.append("g")
-    .attr("class", "beam")
-    .attr("transform", d => `rotate(${90 - (d.x * 180 / Math.PI)})`);
-
-  beamG.append("rect")
-    .attr("class", "beam-halo")
-    .attr("x", d => -beamHaloWidth(d) / 2)
-    .attr("y", d => -beamLength(d))
-    .attr("width", beamHaloWidth)
-    .attr("height", beamLength)
-    .attr("rx", d => beamHaloWidth(d) / 2);
-
-  beamG.append("rect")
-    .attr("class", "beam-glow")
-    .attr("x", d => -beamGlowWidth(d) / 2)
-    .attr("y", d => -beamLength(d))
-    .attr("width", beamGlowWidth)
-    .attr("height", beamLength)
-    .attr("rx", d => beamGlowWidth(d) / 2);
-
   if (selectedId) applyHighlight(selectedId);
 
   const wrap = document.getElementById("graph-wrap");
   const vw = wrap.clientWidth, vh = wrap.clientHeight;
-  // rotateX(TILT_DEG) visually compresses vertical space by cos(TILT_DEG),
-  // so fit against an inflated effective height or the content only ever
-  // fills a fraction of the viewport top-to-bottom.
-  const effectiveVh = vh * TILT_COMPENSATION;
-  const scale = Math.min(vw / diameter, effectiveVh / diameter, 1) * 0.92;
+  const scale = Math.min(vw / diameter, vh / diameter, 1) * 0.92;
   const t = d3.zoomIdentity.translate(vw / 2, vh / 2).scale(scale);
   svg.call(zoom.transform, t);
 }
