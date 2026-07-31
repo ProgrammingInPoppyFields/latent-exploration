@@ -12,7 +12,7 @@ Somewhere, someone sat down and generated a video, then generated four more vide
 month — until a folder of mp4s achieved sentience and had to be given a name, a
 build script, and a glowing white circle to call home.
 
-## A taste of the clusterfuck
+## A taste of the chaos
 
 These are the four videos that started it all — literally the first fork off the
 origin node, before things spiraled. Click to play. Consider this a warning label.
