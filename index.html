@@ -48,11 +48,17 @@
   #graph:active { cursor: grabbing; }
   #graph-wrap.tilted #graph { transform: rotateX(65deg); }
 
-  #view-toggle {
+  #top-right-controls {
     position: absolute;
     top: 18px;
     right: 24px;
     z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #view-toggle {
     display: inline-flex;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -305,13 +311,14 @@
   #legend .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 
   #stats-badge {
-    position: fixed;
-    left: 16px;
-    bottom: 14px;
-    z-index: 4;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 11px;
     color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    white-space: nowrap;
     pointer-events: none;
   }
 </style>
@@ -325,9 +332,12 @@
     </header>
     <svg id="graph"></svg>
     <div id="sidebar-toggle">‹</div>
-    <div id="view-toggle">
-      <button data-view="3d">3D</button>
-      <button data-view="2d" class="active">2D</button>
+    <div id="top-right-controls">
+      <div id="stats-badge"></div>
+      <div id="view-toggle">
+        <button data-view="3d">3D</button>
+        <button data-view="2d" class="active">2D</button>
+      </div>
     </div>
   </div>
   <div id="sidebar">
@@ -347,7 +357,6 @@
     </div>
   </div>
 </div>
-<div id="stats-badge"></div>
 
 <script>
 const videoEl = document.getElementById("video");
@@ -404,7 +413,7 @@ function init(data) {
   const total = Object.values(data.nodes).length;
   const originCount = Object.values(data.nodes).filter(n => n.parent === null).length;
   const nodeCount = total - originCount;
-  statsEl.textContent = `${nodeCount} nodes / ${originCount} origin node${originCount !== 1 ? "s" : ""}`;
+  statsEl.textContent = `${originCount} origin nodes / ${nodeCount} children nodes`;
 
   draw();
 }
