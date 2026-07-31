@@ -329,17 +329,14 @@ function layoutRadial(root) {
     .size([2 * Math.PI, availableRadius])
     .separation((a, b) => (a.parent === b.parent ? 1.6 : 3.2) / a.depth)(root);
   root.each(d => { if (d.depth > 0) d.y += innerRadius; });
-  const totalRadius = availableRadius + innerRadius + 60;
-  const size = totalRadius * 2;
-  return { width: size, height: size, translate: [size / 2, size / 2] };
+  return availableRadius + innerRadius + 60; // total radius; root stays at local (0,0)
 }
 
 function draw() {
   g.selectAll("*").remove();
 
-  const { width, height, translate } = layoutRadial(rootHierarchy);
-
-  g.attr("transform", `translate(${translate[0]},${translate[1]})`);
+  const totalRadius = layoutRadial(rootHierarchy);
+  const diameter = totalRadius * 2;
 
   const linkPath = d3.linkRadial().angle(d => d.x).radius(d => d.y);
   const nodeTransform = d => `rotate(${(d.x * 180 / Math.PI) - 90}) translate(${d.y},0)`;
@@ -376,10 +373,8 @@ function draw() {
 
   const wrap = document.getElementById("graph-wrap");
   const vw = wrap.clientWidth, vh = wrap.clientHeight;
-  const scale = Math.min(vw / width, vh / height, 1) * 0.92;
-  const t = d3.zoomIdentity
-    .translate((vw - width * scale) / 2, (vh - height * scale) / 2)
-    .scale(scale);
+  const scale = Math.min(vw / diameter, vh / diameter, 1) * 0.92;
+  const t = d3.zoomIdentity.translate(vw / 2, vh / 2).scale(scale);
   svg.call(zoom.transform, t);
 }
 
