@@ -43,8 +43,39 @@
     cursor: grab;
     transform: rotateX(52deg);
     transform-origin: 50% 50%;
+    transition: transform 0.5s ease;
   }
   #graph:active { cursor: grabbing; }
+  #graph-wrap.flat #graph { transform: none; }
+
+  #view-toggle {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    z-index: 3;
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  #view-toggle button {
+    background: var(--panel);
+    color: var(--text-dim);
+    border: none;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  #view-toggle button + button { border-left: 1px solid var(--line); }
+  #view-toggle button.active {
+    background: var(--node-real);
+    color: #06131a;
+  }
 
   #sidebar-toggle {
     position: absolute;
@@ -323,6 +354,10 @@
     </header>
     <svg id="graph"></svg>
     <div id="sidebar-toggle">‹</div>
+    <div id="view-toggle">
+      <button data-view="3d" class="active">3D</button>
+      <button data-view="2d">2D</button>
+    </div>
   </div>
   <div id="sidebar">
     <h2>Now Playing</h2>
@@ -352,6 +387,8 @@ const childrenEl = document.getElementById("children-list");
 const statsEl = document.getElementById("stats-badge");
 const sidebarEl = document.getElementById("sidebar");
 const sidebarToggleEl = document.getElementById("sidebar-toggle");
+const graphWrapEl = document.getElementById("graph-wrap");
+const viewToggleEl = document.getElementById("view-toggle");
 
 let selectedId = null;
 let originActive = false;
@@ -368,6 +405,14 @@ function setSidebarOpen(open) {
 
 sidebarToggleEl.addEventListener("click", () => setSidebarOpen(!sidebarOpen));
 setSidebarOpen(false);
+
+viewToggleEl.querySelectorAll("button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    viewToggleEl.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    graphWrapEl.classList.toggle("flat", btn.dataset.view === "2d");
+  });
+});
 
 fetch("tree.json")
   .then(r => r.json())
