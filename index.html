@@ -177,8 +177,8 @@
   }
 
   #sidebar {
-    flex: 0 0 380px;
-    width: 380px;
+    flex: 0 0 33vw;
+    width: 33vw;
     background: var(--panel);
     border-left: 1px solid var(--line);
     display: flex;
@@ -186,6 +186,12 @@
     padding: 20px;
     overflow-y: auto;
     transition: flex-basis 0.25s ease, width 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+  }
+  @media (orientation: portrait) {
+    #sidebar {
+      flex-basis: 80vw;
+      width: 80vw;
+    }
   }
   #sidebar.collapsed {
     flex-basis: 0;
@@ -227,26 +233,43 @@
   }
   #node-info {
     margin-top: 16px;
-    font-size: 13px;
-    color: var(--text-dim);
-    line-height: 1.7;
-  }
-  #node-info .id {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    color: var(--text);
-    font-size: 14px;
-    word-break: break-all;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
   }
-  #node-info .label {
+  #node-info .spec-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 0;
+  }
+  #node-info .spec-row + .spec-row {
+    border-top: 1px dashed var(--line);
+  }
+  #node-info .spec-label {
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  #node-info .spec-leader {
+    flex: 1;
+    border-bottom: 1px dotted var(--line);
+    margin-bottom: 4px;
+    min-width: 8px;
+  }
+  #node-info .spec-value {
+    color: var(--text);
+    font-size: 12px;
+    text-align: right;
+    overflow-wrap: anywhere;
+    max-width: 55%;
+  }
+  #node-info .spec-value.accent {
     color: var(--node-selected);
     font-weight: 600;
-  }
-  #node-info .stat-row {
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid var(--line);
-    padding-top: 8px;
-    margin-top: 8px;
   }
   #children-list {
     margin-top: 16px;
@@ -410,6 +433,10 @@ function hideOriginImage() {
   }
 }
 
+function specRow(label, value, accent) {
+  return `<div class="spec-row"><span class="spec-label">${label}</span><span class="spec-leader"></span><span class="spec-value${accent ? " accent" : ""}">${value}</span></div>`;
+}
+
 function selectRoot() {
   selectedId = null;
   originActive = true;
@@ -421,10 +448,11 @@ function selectRoot() {
   showOriginImage();
 
   const root = nodeById["0"];
-  infoEl.innerHTML = `
-    <div class="id">Origin</div>
-    <div class="stat-row"><span>Children</span><span>${root.children.length}</span></div>
-  `;
+  infoEl.innerHTML =
+    specRow("NODE ID", "0 (ORIGIN)") +
+    specRow("DEPTH LEVEL", "0") +
+    specRow("CHILD NODES", root.children.length) +
+    specRow("PARENT NODE ID", "—");
   childrenEl.innerHTML = "";
   if (root.children.length) {
     const label = document.createElement("div");
@@ -540,12 +568,12 @@ function selectNode(id) {
   videoEl.play().catch(() => {});
 
   const depth = id.split("_").length;
-  infoEl.innerHTML = `
-    <div class="id">${id}${n.label ? ` <span class="label">"${n.label}"</span>` : ""}</div>
-    <div class="stat-row"><span>Depth</span><span>${depth}</span></div>
-    <div class="stat-row"><span>Children</span><span>${n.children.length}</span></div>
-    <div class="stat-row"><span>Parent</span><span>${n.parent ?? "—"}</span></div>
-  `;
+  infoEl.innerHTML =
+    specRow("NODE ID", id) +
+    specRow("DEPTH LEVEL", depth) +
+    specRow("CHILD NODES", n.children.length) +
+    specRow("PARENT NODE ID", n.parent ?? "—") +
+    (n.label ? specRow("LABEL", `"${n.label}"`, true) : "");
 
   childrenEl.innerHTML = "";
   if (n.children.length) {
