@@ -43,6 +43,30 @@
     text-transform: uppercase; color: var(--text);
   }
   header p { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
+  #layout-toggle {
+    pointer-events: auto;
+    display: inline-flex;
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  #layout-toggle button {
+    background: var(--panel);
+    color: var(--text-dim);
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  #layout-toggle button + button { border-left: 1px solid var(--line); }
+  #layout-toggle button.active {
+    background: var(--node-real);
+    color: #06131a;
+  }
 
   .link {
     fill: none;
@@ -198,6 +222,10 @@
     <header>
       <h1>Latent Exploration</h1>
       <p>Click a filled node to play its clip. Scroll/drag to pan &amp; zoom.</p>
+      <div id="layout-toggle">
+        <button data-mode="radial" class="active">Radial</button>
+        <button data-mode="horizontal">Horizontal</button>
+      </div>
     </header>
     <svg id="graph"></svg>
   </div>
@@ -227,6 +255,9 @@ const statsEl = document.getElementById("stats-footer");
 
 let selectedId = null;
 let nodeById = {};
+let rootHierarchy = null;
+let svg, g, zoom;
+let currentMode = "radial";
 
 fetch("tree.json")
   .then(r => r.json())
@@ -234,92 +265,145 @@ fetch("tree.json")
 
 function init(data) {
   nodeById = data.nodes;
-  const root = d3.hierarchy(data.nodes[data.root], d => d.children.map(cid => data.nodes[cid]));
+  rootHierarchy = d3.hierarchy(data.nodes[data.root], d => d.children.map(cid => data.nodes[cid]));
 
-  const dx = 22;      // vertical spacing between sibling nodes
-  const dy = 170;      // horizontal spacing per depth level
-  const treeLayout = d3.tree().nodeSize([dx, dy]);
-  treeLayout(root);
+  svg = d3.select("#graph");
+  g = svg.append("g");
 
-  let x0 = Infinity, x1 = -Infinity;
-  root.each(d => { if (d.x > x1) x1 = d.x; if (d.x < x0) x0 = d.x; });
-  const height = x1 - x0 + dx * 4;
-  const width = (root.height + 1) * dy + 200;
-
-  const svg = d3.select("#graph")
-    .attr("viewBox", [0, 0, width, height]);
-
-  const g = svg.append("g")
-    .attr("transform", `translate(60, ${-x0 + dx * 2})`);
-
-  const zoom = d3.zoom()
-    .scaleExtent([0.15, 4])
+  zoom = d3.zoom()
+    .scaleExtent([0.05, 5])
     .on("zoom", (event) => g.attr("transform", event.transform));
   svg.call(zoom);
 
-  // fit-to-view initial transform
-  const wrap = document.getElementById("graph-wrap");
-  const vw = wrap.clientWidth, vh = wrap.clientHeight;
-  const scale = Math.min(vw / width, vh / height, 1) * 0.92;
-  const initialTransform = d3.zoomIdentity
-    .translate((vw - width * scale) / 2, (vh - height * scale) / 2)
-    .scale(scale);
-  svg.call(zoom.transform, initialTransform);
-
-  const linkGen = d3.linkHorizontal().x(d => d.y).y(d => d.x);
-
-  const link = g.append("g").selectAll("path")
-    .data(root.links())
-    .join("path")
-    .attr("class", "link")
-    .attr("id", d => `link-${d.target.data.id}`)
-    .attr("d", linkGen);
-
-  const node = g.append("g").selectAll("g")
-    .data(root.descendants())
-    .join("g")
-    .attr("class", d => `node ${d.data.virtual ? "virtual" : "real"}`)
-    .attr("id", d => `node-${d.data.id}`)
-    .attr("transform", d => `translate(${d.y},${d.x})`)
-    .on("click", (event, d) => { if (!d.data.virtual) selectNode(d.data.id); });
-
-  node.append("circle").attr("r", 5);
-
-  node.filter(d => d.data.label)
-    .append("text")
-    .attr("class", "label-tag")
-    .attr("dy", "-0.9em")
-    .attr("x", 8)
-    .text(d => d.data.label);
-
-  node.append("text")
-    .attr("dy", "0.32em")
-    .attr("x", d => d.children ? -9 : 9)
-    .attr("text-anchor", d => d.children ? "end" : "start")
-    .text(d => d.data.id.split("_").pop());
-
-  window.__selectVizNode = (id) => {
-    d3.selectAll(".node").classed("selected", false).classed("on-path", false);
-    d3.selectAll(".link").classed("on-path", false);
-    let cur = nodeById[id];
-    const chain = [];
-    while (cur) { chain.push(cur.id); cur = cur.parent ? nodeById[cur.parent] : null; }
-    chain.forEach(nid => {
-      d3.select(`#node-${CSS.escape(nid)}`).classed("on-path", true);
-      d3.select(`#link-${CSS.escape(nid)}`).classed("on-path", true);
+  document.querySelectorAll("#layout-toggle button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.mode === currentMode) return;
+      document.querySelectorAll("#layout-toggle button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      draw(btn.dataset.mode);
     });
-    d3.select(`#node-${CSS.escape(id)}`).classed("selected", true);
-  };
+  });
 
   const realCount = Object.values(data.nodes).filter(n => !n.virtual).length;
   const total = Object.values(data.nodes).length;
   statsEl.textContent = `${realCount} clips across ${total} nodes`;
+
+  draw(currentMode);
+}
+
+function layoutRadial(root) {
+  const radius = Math.max(root.height, 1) * 30 + 40;
+  d3.tree()
+    .size([2 * Math.PI, radius])
+    .separation((a, b) => (a.parent === b.parent ? 1 : 2) / a.depth)(root);
+  const size = radius * 2 + 140;
+  return { width: size, height: size, translate: [size / 2, size / 2] };
+}
+
+function layoutHorizontal(root) {
+  const dx = 22, dy = 170;
+  d3.tree().nodeSize([dx, dy])(root);
+  let x0 = Infinity, x1 = -Infinity;
+  root.each(d => { if (d.x > x1) x1 = d.x; if (d.x < x0) x0 = d.x; });
+  const width = (root.height + 1) * dy + 200;
+  const height = x1 - x0 + dx * 4;
+  return { width, height, translate: [60, -x0 + dx * 2] };
+}
+
+function draw(mode) {
+  currentMode = mode;
+  g.selectAll("*").remove();
+
+  const layoutFn = mode === "radial" ? layoutRadial : layoutHorizontal;
+  const { width, height, translate } = layoutFn(rootHierarchy);
+
+  svg.attr("viewBox", [0, 0, width, height]);
+  g.attr("transform", `translate(${translate[0]},${translate[1]})`);
+
+  const linkPath = mode === "radial"
+    ? d3.linkRadial().angle(d => d.x).radius(d => d.y)
+    : d3.linkHorizontal().x(d => d.y).y(d => d.x);
+
+  const nodeTransform = mode === "radial"
+    ? d => `rotate(${(d.x * 180 / Math.PI) - 90}) translate(${d.y},0)`
+    : d => `translate(${d.y},${d.x})`;
+
+  g.append("g").selectAll("path")
+    .data(rootHierarchy.links())
+    .join("path")
+    .attr("class", "link")
+    .attr("id", d => `link-${d.target.data.id}`)
+    .attr("d", linkPath);
+
+  const node = g.append("g").selectAll("g")
+    .data(rootHierarchy.descendants())
+    .join("g")
+    .attr("class", d => `node ${d.data.virtual ? "virtual" : "real"}`)
+    .attr("id", d => `node-${d.data.id}`)
+    .attr("transform", nodeTransform)
+    .on("click", (event, d) => { if (!d.data.virtual) selectNode(d.data.id); });
+
+  node.append("circle").attr("r", 5);
+
+  if (mode === "radial") {
+    node.filter(d => d.data.label)
+      .append("text")
+      .attr("class", "label-tag")
+      .attr("transform", d => d.x >= Math.PI ? "rotate(180)" : null)
+      .attr("text-anchor", d => d.x < Math.PI ? "start" : "end")
+      .attr("x", d => d.x < Math.PI ? 9 : -9)
+      .attr("dy", "-0.9em")
+      .text(d => d.data.label);
+
+    node.append("text")
+      .attr("transform", d => d.x >= Math.PI ? "rotate(180)" : null)
+      .attr("text-anchor", d => d.x < Math.PI ? "start" : "end")
+      .attr("x", d => d.x < Math.PI ? 9 : -9)
+      .attr("dy", "0.32em")
+      .text(d => d.data.id.split("_").pop());
+  } else {
+    node.filter(d => d.data.label)
+      .append("text")
+      .attr("class", "label-tag")
+      .attr("dy", "-0.9em")
+      .attr("x", 8)
+      .text(d => d.data.label);
+
+    node.append("text")
+      .attr("dy", "0.32em")
+      .attr("x", d => d.children ? -9 : 9)
+      .attr("text-anchor", d => d.children ? "end" : "start")
+      .text(d => d.data.id.split("_").pop());
+  }
+
+  if (selectedId) applyHighlight(selectedId);
+
+  const wrap = document.getElementById("graph-wrap");
+  const vw = wrap.clientWidth, vh = wrap.clientHeight;
+  const scale = Math.min(vw / width, vh / height, 1) * 0.92;
+  const t = d3.zoomIdentity
+    .translate((vw - width * scale) / 2, (vh - height * scale) / 2)
+    .scale(scale);
+  svg.call(zoom.transform, t);
+}
+
+function applyHighlight(id) {
+  d3.selectAll(".node").classed("selected", false).classed("on-path", false);
+  d3.selectAll(".link").classed("on-path", false);
+  let cur = nodeById[id];
+  const chain = [];
+  while (cur) { chain.push(cur.id); cur = cur.parent ? nodeById[cur.parent] : null; }
+  chain.forEach(nid => {
+    d3.select(`#node-${CSS.escape(nid)}`).classed("on-path", true);
+    d3.select(`#link-${CSS.escape(nid)}`).classed("on-path", true);
+  });
+  d3.select(`#node-${CSS.escape(id)}`).classed("selected", true);
 }
 
 function selectNode(id) {
   selectedId = id;
   const n = nodeById[id];
-  window.__selectVizNode(id);
+  applyHighlight(id);
 
   videoEl.src = n.video;
   videoEl.style.display = "block";
