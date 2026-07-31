@@ -12,6 +12,24 @@ Somewhere, someone sat down and generated a video, then generated four more vide
 month — until a folder of mp4s achieved sentience and had to be given a name, a
 build script, and a glowing white circle to call home.
 
+## A taste of the clusterfuck
+
+These are the four videos that started it all — literally the first fork off the
+origin node, before things spiraled. Click to play. Consider this a warning label.
+
+<table>
+<tr>
+<td><video src="videos/0_1.mp4" width="360" controls loop muted playsinline></video></td>
+<td><video src="videos/0_2.mp4" width="360" controls loop muted playsinline></video></td>
+</tr>
+<tr>
+<td><video src="videos/0_3.mp4" width="360" controls loop muted playsinline></video></td>
+<td><video src="videos/0_4.mp4" width="360" controls loop muted playsinline></video></td>
+</tr>
+</table>
+
+There are 295 more of these. Go outside.
+
 ## What is this, actually
 
 A branching-tree viewer. Every clip is a decision someone made about what should
