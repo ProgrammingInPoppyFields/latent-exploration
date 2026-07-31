@@ -118,19 +118,16 @@
   .node.hover-path:not(:hover) circle {
     fill: var(--path);
     stroke: var(--path);
-    filter: drop-shadow(0 0 6px var(--path));
   }
   .node.selected circle,
   .node.real:hover circle {
     fill: var(--current);
     stroke: var(--current);
-    filter: drop-shadow(0 0 14px var(--current));
   }
   .node.root.on-path circle,
   .node.root.hover-path circle {
     fill: var(--current);
     stroke: var(--current);
-    filter: drop-shadow(0 0 16px var(--current));
   }
   .node.root circle {
     fill: none;
@@ -142,7 +139,61 @@
   .node.root:hover circle,
   .node.root.active circle {
     fill: var(--root);
-    filter: drop-shadow(0 0 18px var(--root)) drop-shadow(0 0 34px var(--root));
+  }
+
+  /* vertical light-beam glow, counter-rotated so it always points "up"
+     regardless of a node's angular position in the radial layout */
+  .beam {
+    opacity: 0;
+    pointer-events: none;
+    mask-image: linear-gradient(to top, black, transparent 88%);
+    -webkit-mask-image: linear-gradient(to top, black, transparent 88%);
+    transition: opacity 0.2s ease;
+  }
+  .beam-glow {
+    stroke-width: 9px;
+    stroke-linecap: round;
+    filter: blur(5px);
+  }
+  .beam-core {
+    stroke-width: 1.6px;
+    stroke-linecap: round;
+  }
+  .node.on-path:not(.selected) .beam,
+  .node.hover-path:not(:hover) .beam {
+    opacity: 0.85;
+  }
+  .node.on-path:not(.selected) .beam-glow,
+  .node.on-path:not(.selected) .beam-core,
+  .node.hover-path:not(:hover) .beam-glow,
+  .node.hover-path:not(:hover) .beam-core {
+    stroke: var(--path);
+  }
+  .node.selected .beam,
+  .node.real:hover .beam {
+    opacity: 1;
+  }
+  .node.selected .beam-glow,
+  .node.selected .beam-core,
+  .node.real:hover .beam-glow,
+  .node.real:hover .beam-core {
+    stroke: var(--current);
+  }
+  .node.root.on-path .beam,
+  .node.root.hover-path .beam,
+  .node.root:hover .beam,
+  .node.root.active .beam {
+    opacity: 1;
+  }
+  .node.root.on-path .beam-glow,
+  .node.root.on-path .beam-core,
+  .node.root.hover-path .beam-glow,
+  .node.root.hover-path .beam-core,
+  .node.root:hover .beam-glow,
+  .node.root:hover .beam-core,
+  .node.root.active .beam-glow,
+  .node.root.active .beam-core {
+    stroke: var(--current);
   }
 
   #sidebar {
@@ -348,6 +399,10 @@ function nodeRadius(d) {
   return base + childBonus;
 }
 
+function beamLength(d) {
+  return nodeRadius(d) * 2.4;
+}
+
 function showOriginImage() {
   videoEl.style.display = "none";
   placeholderEl.style.display = "none";
@@ -443,6 +498,20 @@ function draw() {
     });
 
   node.append("circle").attr("r", nodeRadius);
+
+  const beamG = node.append("g")
+    .attr("class", "beam")
+    .attr("transform", d => `rotate(${90 - (d.x * 180 / Math.PI)})`);
+
+  beamG.append("line")
+    .attr("class", "beam-glow")
+    .attr("x1", 0).attr("y1", 0)
+    .attr("x2", 0).attr("y2", d => -beamLength(d));
+
+  beamG.append("line")
+    .attr("class", "beam-core")
+    .attr("x1", 0).attr("y1", 0)
+    .attr("x2", 0).attr("y2", d => -beamLength(d));
 
   if (selectedId) applyHighlight(selectedId);
 
