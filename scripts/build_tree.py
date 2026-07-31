@@ -20,16 +20,11 @@ TREE_JSON_OUT = REPO_DIR / "tree.json"
 
 FILENAME_RE = re.compile(r"^([\d]+(?:_[\d]+)*)(.*?)\.mp4(?:\.mp4)?$", re.IGNORECASE)
 
-EXCLUDED = {"bruh seriously.mp4"}
-
 
 def parse_source_files():
     parsed = {}  # id -> (source_path, label)
     skipped = []
     for f in sorted(SOURCE_DIR.glob("*.mp4")):
-        if f.name in EXCLUDED:
-            skipped.append(f.name)
-            continue
         m = FILENAME_RE.match(f.name)
         if not m:
             skipped.append(f.name)
@@ -96,7 +91,8 @@ def main():
     copy_videos(parsed)
     print(f"Copied {len(parsed)} videos into {VIDEOS_OUT}")
 
-    TREE_JSON_OUT.write_text(json.dumps({"root": "0", "nodes": nodes}, indent=2))
+    sorted_nodes = dict(sorted(nodes.items()))
+    TREE_JSON_OUT.write_text(json.dumps({"root": "0", "nodes": sorted_nodes}, indent=2))
     print(f"Wrote {TREE_JSON_OUT}")
 
 

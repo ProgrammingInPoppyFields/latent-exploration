@@ -52,9 +52,6 @@ A couple of nodes exist only as ghosts — branch points where something was
 branched *from* but the clip itself didn't survive to see this README. They show
 up as small dashed circles doing their best.
 
-One file, `bruh seriously.mp4`, refused to participate in the naming convention on
-principle and has been excommunicated from the graph. We respect its choice.
-
 ## Running this locally, a task of unbelievable difficulty
 
 ```
