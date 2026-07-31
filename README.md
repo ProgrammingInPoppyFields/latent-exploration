@@ -15,16 +15,16 @@ build script, and a glowing white circle to call home.
 ## A taste of the chaos
 
 These are the four videos that started it all — literally the first fork off the
-origin node, before things spiraled. Click to play. Consider this a warning label.
+origin node, before things spiraled. Consider this a warning label.
 
 <table>
 <tr>
-<td><video src="videos/0_1.mp4" width="360" controls loop muted playsinline></video></td>
-<td><video src="videos/0_2.mp4" width="360" controls loop muted playsinline></video></td>
+<td><img src="GIFs/0_1.gif" width="280" /></td>
+<td><img src="GIFs/0_2.gif" width="280" /></td>
 </tr>
 <tr>
-<td><video src="videos/0_3.mp4" width="360" controls loop muted playsinline></video></td>
-<td><video src="videos/0_4.mp4" width="360" controls loop muted playsinline></video></td>
+<td><img src="GIFs/0_3.gif" width="280" /></td>
+<td><img src="GIFs/0_4.gif" width="280" /></td>
 </tr>
 </table>
 
