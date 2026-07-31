@@ -60,3 +60,11 @@ python3 scripts/build_tree.py
 2. Repo settings → Pages → enable for `main`, root.
 3. Static site, zero build step, it just works, which is more than can be said for
    most things.
+
+## Credits
+
+Every image. Every video. All 299 nodes of them. Midjourney. Not "mostly
+Midjourney." Not "Midjourney with some touch-ups." Midjourney, start to finish,
+top to bottom, root to leaf. If you look closely enough at any given clip you
+will not find a human hand anywhere near it. There is no camera. There was never
+a camera. It's Midjourney all the way down.
