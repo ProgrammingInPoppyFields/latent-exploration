@@ -153,7 +153,7 @@
     transition: opacity 0.2s ease;
   }
   .beam-glow {
-    filter: blur(5px);
+    filter: blur(8px);
   }
   .node.on-path:not(.selected) .beam,
   .node.hover-path:not(:hover) .beam {
@@ -410,6 +410,14 @@ function beamLength(d) {
   return nodeRadius(d) * 2.4;
 }
 
+function beamCoreWidth(d) {
+  return nodeRadius(d) * 1.5;
+}
+
+function beamGlowWidth(d) {
+  return nodeRadius(d) * 2.6;
+}
+
 function showOriginImage() {
   videoEl.style.display = "none";
   placeholderEl.style.display = "none";
@@ -512,19 +520,19 @@ function draw() {
 
   beamG.append("rect")
     .attr("class", "beam-glow")
-    .attr("x", -5)
+    .attr("x", d => -beamGlowWidth(d) / 2)
     .attr("y", d => -beamLength(d))
-    .attr("width", 10)
+    .attr("width", beamGlowWidth)
     .attr("height", beamLength)
-    .attr("rx", 5);
+    .attr("rx", d => beamGlowWidth(d) / 2);
 
   beamG.append("rect")
     .attr("class", "beam-core")
-    .attr("x", -1)
+    .attr("x", d => -beamCoreWidth(d) / 2)
     .attr("y", d => -beamLength(d))
-    .attr("width", 2)
+    .attr("width", beamCoreWidth)
     .attr("height", beamLength)
-    .attr("rx", 1);
+    .attr("rx", d => beamCoreWidth(d) / 2);
 
   if (selectedId) applyHighlight(selectedId);
 
