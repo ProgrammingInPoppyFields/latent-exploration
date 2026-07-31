@@ -41,7 +41,7 @@
     height: 100%;
     display: block;
     cursor: grab;
-    transform: rotateX(52deg);
+    transform: rotateX(65deg);
     transform-origin: 50% 50%;
     transition: transform 0.5s ease;
   }
@@ -390,6 +390,9 @@ const sidebarToggleEl = document.getElementById("sidebar-toggle");
 const graphWrapEl = document.getElementById("graph-wrap");
 const viewToggleEl = document.getElementById("view-toggle");
 
+const TILT_DEG = 65; // must match #graph's rotateX() in CSS
+const TILT_COMPENSATION = 1 / Math.cos(TILT_DEG * Math.PI / 180);
+
 let selectedId = null;
 let originActive = false;
 let nodeById = {};
@@ -588,7 +591,11 @@ function draw() {
 
   const wrap = document.getElementById("graph-wrap");
   const vw = wrap.clientWidth, vh = wrap.clientHeight;
-  const scale = Math.min(vw / diameter, vh / diameter, 1) * 0.92;
+  // rotateX(TILT_DEG) visually compresses vertical space by cos(TILT_DEG),
+  // so fit against an inflated effective height or the content only ever
+  // fills a fraction of the viewport top-to-bottom.
+  const effectiveVh = vh * TILT_COMPENSATION;
+  const scale = Math.min(vw / diameter, effectiveVh / diameter, 1) * 0.92;
   const t = d3.zoomIdentity.translate(vw / 2, vh / 2).scale(scale);
   svg.call(zoom.transform, t);
 }
