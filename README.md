@@ -1,43 +1,62 @@
 # Latent Exploration
 
-An interactive branching-tree viewer for a latent-space video exploration: 298 clips,
-each one a branch taken from a previous generation, laid out as a clickable node graph.
+![Behold](screenshots/1.png)
 
-## How the tree works
+299 nodes. 1 origin. Countless hours that could have been spent doing literally
+anything else. This is a website whose entire purpose is to let you click circles
+and watch tiny videos, and honestly? It's incredible. Groundbreaking. A triumph
+of human-computer interaction that will not appear on your resume.
 
-Each clip's filename encodes its path from the root, e.g. `0_1_2_1_1.mp4` is reached by
-picking branch 1, then 2, then 1, then 1. `scripts/build_tree.py` parses those filenames
-into `tree.json` (parent/child links) and copies the source clips into `videos/` under
-clean id-based names.
+Somewhere, someone sat down and generated a video, then generated four more videos
+*from* that video, then kept going — recursively, compulsively, at 2am, for over a
+month — until a folder of mp4s achieved sentience and had to be given a name, a
+build script, and a glowing white circle to call home.
 
-A couple of branch points exist where a clip was branched from but the intermediate clip
-itself wasn't kept — those show up in the graph as small dashed "virtual" nodes with no
-video attached, just to keep the tree connected.
+## What is this, actually
 
-One file, `bruh seriously.mp4`, didn't fit the naming scheme at all and was left out of
-the graph entirely.
+A branching-tree viewer. Every clip is a decision someone made about what should
+happen next, and every decision spawned more decisions, and here we all are. Click
+a filled node, it plays. Click the big glowing one in the middle, you get The
+Original Image, the one that started this whole cascade, presented with the
+reverence of a museum placard.
 
-## Viewing locally
+The path from wherever you clicked back to the beginning lights up cyan, because
+apparently we needed to *see* the full weight of how we got here.
+
+## How the tree works (yes, it's just filenames)
+
+Each clip's filename is its own address, e.g. `0_1_2_1_1.mp4` means: from the
+start, take branch 1, then 2, then 1, then 1, arrive at your destination, question
+nothing. `scripts/build_tree.py` reads this glorified breadcrumb trail, builds
+`tree.json`, and copies the clips into `videos/` with names a computer can respect.
+
+A couple of nodes exist only as ghosts — branch points where something was
+branched *from* but the clip itself didn't survive to see this README. They show
+up as small dashed circles doing their best.
+
+One file, `bruh seriously.mp4`, refused to participate in the naming convention on
+principle and has been excommunicated from the graph. We respect its choice.
+
+## Running this locally, a task of unbelievable difficulty
 
 ```
 python3 -m http.server 8000
 ```
 
-then open `http://localhost:8000`.
+Then go to `http://localhost:8000` like a person who knows how URLs work.
 
 ## Regenerating the tree
 
-If the source folder (`/Users/helen/Downloads/Latent Exploration - Master`) changes,
-rerun:
+Added more chaos to the source folder? Rerun this and let the script sort out your
+life choices:
 
 ```
 python3 scripts/build_tree.py
 ```
 
-This re-copies any new/changed videos into `videos/` and rewrites `tree.json`.
-
 ## Publishing to GitHub Pages
 
-1. Push this repo to GitHub.
-2. In the repo settings, enable Pages for the `main` branch (root).
-3. The site will build automatically since it's static HTML/CSS/JS with no build step.
+1. Push this repo to GitHub. (Godspeed.)
+2. Repo settings → Pages → enable for `main`, root.
+3. Static site, zero build step, it just works, which is more than can be said for
+   most things.
