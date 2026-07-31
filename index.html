@@ -29,8 +29,21 @@
   }
   #app { display: flex; height: 100vh; width: 100vw; }
 
-  #graph-wrap { flex: 1 1 auto; position: relative; min-width: 0; }
-  #graph { width: 100%; height: 100%; display: block; cursor: grab; }
+  #graph-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    min-width: 0;
+    perspective: 1500px;
+    overflow: hidden;
+  }
+  #graph {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    transform: rotateX(52deg);
+    transform-origin: 50% 50%;
+  }
   #graph:active { cursor: grabbing; }
 
   #sidebar-toggle {
