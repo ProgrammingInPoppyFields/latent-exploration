@@ -91,13 +91,15 @@
     filter: drop-shadow(0 0 10px var(--node-real));
   }
   .node.root circle {
-    fill: var(--root);
+    fill: none;
     stroke: var(--root);
     stroke-width: 4px;
+    stroke-dasharray: none;
     cursor: pointer;
   }
   .node.root:hover circle,
   .node.root.active circle {
+    fill: var(--root);
     filter: drop-shadow(0 0 18px var(--root)) drop-shadow(0 0 34px var(--root));
   }
 
