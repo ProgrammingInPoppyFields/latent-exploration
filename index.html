@@ -236,10 +236,16 @@
   }
   #legend .row { display: flex; align-items: center; gap: 8px; }
   #legend .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-  #stats-footer {
-    margin-top: 10px;
+
+  #stats-badge {
+    position: fixed;
+    left: 16px;
+    bottom: 14px;
+    z-index: 4;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 11px;
     color: var(--text-dim);
+    pointer-events: none;
   }
 </style>
 </head>
@@ -267,10 +273,10 @@
       <div class="row"><span class="swatch" style="background:transparent;border:1.5px dashed var(--node-virtual)"></span> branch point, no clip kept</div>
       <div class="row"><span class="swatch" style="background:var(--path)"></span> path back to root</div>
       <div class="row"><span class="swatch" style="background:var(--current)"></span> current node</div>
-      <div id="stats-footer"></div>
     </div>
   </div>
 </div>
+<div id="stats-badge"></div>
 
 <script>
 const videoEl = document.getElementById("video");
@@ -278,7 +284,7 @@ const originImgEl = document.getElementById("origin-img");
 const placeholderEl = document.getElementById("video-placeholder");
 const infoEl = document.getElementById("node-info");
 const childrenEl = document.getElementById("children-list");
-const statsEl = document.getElementById("stats-footer");
+const statsEl = document.getElementById("stats-badge");
 const sidebarEl = document.getElementById("sidebar");
 const sidebarToggleEl = document.getElementById("sidebar-toggle");
 
@@ -314,9 +320,10 @@ function init(data) {
     .on("zoom", (event) => g.attr("transform", event.transform));
   svg.call(zoom);
 
-  const realCount = Object.values(data.nodes).filter(n => !n.virtual).length;
   const total = Object.values(data.nodes).length;
-  statsEl.textContent = `${realCount} clips across ${total} nodes`;
+  const originCount = Object.values(data.nodes).filter(n => n.parent === null).length;
+  const nodeCount = total - originCount;
+  statsEl.textContent = `${nodeCount} nodes / ${originCount} origin node${originCount !== 1 ? "s" : ""}`;
 
   draw();
 }
