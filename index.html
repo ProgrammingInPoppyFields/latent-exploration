@@ -322,6 +322,26 @@
     white-space: nowrap;
     pointer-events: none;
   }
+
+  #github-link {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  #github-link:hover {
+    color: var(--text);
+    border-color: var(--node-real);
+  }
 </style>
 </head>
 <body>
@@ -339,6 +359,7 @@
         <button data-view="3d">3D</button>
         <button data-view="2d" class="active">2D</button>
       </div>
+      <a id="github-link" href="https://github.com/ProgrammingInPoppyFields/latent-exploration" target="_blank" rel="noopener noreferrer">GitHub</a>
     </div>
   </div>
   <div id="sidebar">
