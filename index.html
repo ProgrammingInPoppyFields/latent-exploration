@@ -13,7 +13,8 @@
     --node-real: #6ee7ff;
     --node-virtual: #3a3a4a;
     --node-selected: #ff6ec7;
-    --path: #ff6ec7;
+    --path: #6ee7ff;
+    --current: #ffffff;
     --root: #ffffff;
     --text: #e8e8f0;
     --text-dim: #8888a0;
@@ -53,6 +54,7 @@
   .link.on-path {
     stroke: var(--path);
     stroke-width: 3px;
+    filter: drop-shadow(0 0 4px var(--path));
   }
   .link.hover-path {
     stroke: var(--node-real);
@@ -74,21 +76,17 @@
     stroke: var(--node-virtual);
     stroke-dasharray: 2,2;
   }
-  .node.selected circle {
-    fill: var(--node-selected);
-    stroke: var(--node-selected);
-    filter: drop-shadow(0 0 6px var(--node-selected));
-  }
-  .node.on-path:not(.selected) circle {
+  .node.on-path:not(.selected) circle,
+  .node.hover-path:not(:hover) circle {
+    fill: var(--path);
     stroke: var(--path);
+    filter: drop-shadow(0 0 6px var(--path));
   }
-  .node.real.hover-path circle {
-    stroke: var(--node-real);
-    filter: drop-shadow(0 0 8px var(--node-real));
-  }
+  .node.selected circle,
   .node.real:hover circle {
-    fill: var(--node-real);
-    filter: drop-shadow(0 0 10px var(--node-real));
+    fill: var(--current);
+    stroke: var(--current);
+    filter: drop-shadow(0 0 14px var(--current));
   }
   .node.root circle {
     fill: none;
@@ -224,7 +222,8 @@
     <div id="legend">
       <div class="row"><span class="swatch" style="background:#101018;border:1.5px solid var(--node-real)"></span> has a clip</div>
       <div class="row"><span class="swatch" style="background:transparent;border:1.5px dashed var(--node-virtual)"></span> branch point, no clip kept</div>
-      <div class="row"><span class="swatch" style="background:var(--node-selected)"></span> selected / on path</div>
+      <div class="row"><span class="swatch" style="background:var(--path)"></span> path back to root</div>
+      <div class="row"><span class="swatch" style="background:var(--current)"></span> current node</div>
       <div id="stats-footer"></div>
     </div>
   </div>
