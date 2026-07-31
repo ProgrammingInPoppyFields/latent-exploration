@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Latent Exploration</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #12121a;
+    --line: #2a2a38;
+    --node-real: #6ee7ff;
+    --node-virtual: #3a3a4a;
+    --node-selected: #ff6ec7;
+    --path: #ff6ec7;
+    --text: #e8e8f0;
+    --text-dim: #8888a0;
+    --accent: #6ee7ff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #app { display: flex; height: 100vh; width: 100vw; }
+
+  #graph-wrap { flex: 1 1 auto; position: relative; min-width: 0; }
+  #graph { width: 100%; height: 100%; display: block; cursor: grab; }
+  #graph:active { cursor: grabbing; }
+
+  header {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 18px 24px 10px;
+    pointer-events: none;
+    z-index: 2;
+    background: linear-gradient(to bottom, rgba(10,10,15,0.9), rgba(10,10,15,0));
+  }
+  header h1 {
+    margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text);
+  }
+  header p { margin: 4px 0 0; font-size: 12px; color: var(--text-dim); }
+
+  .link {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1.5px;
+  }
+  .link.on-path {
+    stroke: var(--path);
+    stroke-width: 2.5px;
+  }
+
+  .node circle {
+    stroke-width: 1.5px;
+    cursor: default;
+  }
+  .node.real circle {
+    fill: #101018;
+    stroke: var(--node-real);
+    cursor: pointer;
+  }
+  .node.virtual circle {
+    fill: transparent;
+    stroke: var(--node-virtual);
+    stroke-dasharray: 2,2;
+  }
+  .node.selected circle {
+    fill: var(--node-selected);
+    stroke: var(--node-selected);
+    filter: drop-shadow(0 0 6px var(--node-selected));
+  }
+  .node.on-path:not(.selected) circle {
+    stroke: var(--path);
+  }
+  .node.real:hover circle {
+    fill: rgba(110, 231, 255, 0.25);
+  }
+  .node text {
+    font-size: 9px;
+    fill: var(--text-dim);
+    pointer-events: none;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .node .label-tag {
+    font-size: 9px;
+    fill: var(--node-selected);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  #sidebar {
+    flex: 0 0 380px;
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  #sidebar h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+  }
+  #video-box {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #video-box video {
+    width: 100%; height: 100%; object-fit: contain; display: none;
+  }
+  #video-placeholder {
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    padding: 0 24px;
+    line-height: 1.5;
+  }
+  #node-info {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  #node-info .id {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--text);
+    font-size: 14px;
+    word-break: break-all;
+  }
+  #node-info .label {
+    color: var(--node-selected);
+    font-weight: 600;
+  }
+  #node-info .stat-row {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    margin-top: 8px;
+  }
+  #children-list {
+    margin-top: 16px;
+  }
+  #children-list button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #1a1a24;
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #children-list button:hover {
+    border-color: var(--node-real);
+  }
+  #legend {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #legend .row { display: flex; align-items: center; gap: 8px; }
+  #legend .swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  #stats-footer {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="graph-wrap">
+    <header>
+      <h1>Latent Exploration</h1>
+      <p>Click a filled node to play its clip. Scroll/drag to pan &amp; zoom.</p>
+    </header>
+    <svg id="graph"></svg>
+  </div>
+  <div id="sidebar">
+    <h2>Now Playing</h2>
+    <div id="video-box">
+      <video id="video" controls loop playsinline></video>
+      <div id="video-placeholder">Select a node to play its clip</div>
+    </div>
+    <div id="node-info"></div>
+    <div id="children-list"></div>
+    <div id="legend">
+      <div class="row"><span class="swatch" style="background:#101018;border:1.5px solid var(--node-real)"></span> has a clip</div>
+      <div class="row"><span class="swatch" style="background:transparent;border:1.5px dashed var(--node-virtual)"></span> branch point, no clip kept</div>
+      <div class="row"><span class="swatch" style="background:var(--node-selected)"></span> selected / on path</div>
+      <div id="stats-footer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const videoEl = document.getElementById("video");
+const placeholderEl = document.getElementById("video-placeholder");
+const infoEl = document.getElementById("node-info");
+const childrenEl = document.getElementById("children-list");
+const statsEl = document.getElementById("stats-footer");
+
+let selectedId = null;
+let nodeById = {};
+
+fetch("tree.json")
+  .then(r => r.json())
+  .then(data => init(data));
+
+function init(data) {
+  nodeById = data.nodes;
+  const root = d3.hierarchy(data.nodes[data.root], d => d.children.map(cid => data.nodes[cid]));
+
+  const dx = 22;      // vertical spacing between sibling nodes
+  const dy = 170;      // horizontal spacing per depth level
+  const treeLayout = d3.tree().nodeSize([dx, dy]);
+  treeLayout(root);
+
+  let x0 = Infinity, x1 = -Infinity;
+  root.each(d => { if (d.x > x1) x1 = d.x; if (d.x < x0) x0 = d.x; });
+  const height = x1 - x0 + dx * 4;
+  const width = (root.height + 1) * dy + 200;
+
+  const svg = d3.select("#graph")
+    .attr("viewBox", [0, 0, width, height]);
+
+  const g = svg.append("g")
+    .attr("transform", `translate(60, ${-x0 + dx * 2})`);
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.15, 4])
+    .on("zoom", (event) => g.attr("transform", event.transform));
+  svg.call(zoom);
+
+  // fit-to-view initial transform
+  const wrap = document.getElementById("graph-wrap");
+  const vw = wrap.clientWidth, vh = wrap.clientHeight;
+  const scale = Math.min(vw / width, vh / height, 1) * 0.92;
+  const initialTransform = d3.zoomIdentity
+    .translate((vw - width * scale) / 2, (vh - height * scale) / 2)
+    .scale(scale);
+  svg.call(zoom.transform, initialTransform);
+
+  const linkGen = d3.linkHorizontal().x(d => d.y).y(d => d.x);
+
+  const link = g.append("g").selectAll("path")
+    .data(root.links())
+    .join("path")
+    .attr("class", "link")
+    .attr("id", d => `link-${d.target.data.id}`)
+    .attr("d", linkGen);
+
+  const node = g.append("g").selectAll("g")
+    .data(root.descendants())
+    .join("g")
+    .attr("class", d => `node ${d.data.virtual ? "virtual" : "real"}`)
+    .attr("id", d => `node-${d.data.id}`)
+    .attr("transform", d => `translate(${d.y},${d.x})`)
+    .on("click", (event, d) => { if (!d.data.virtual) selectNode(d.data.id); });
+
+  node.append("circle").attr("r", 5);
+
+  node.filter(d => d.data.label)
+    .append("text")
+    .attr("class", "label-tag")
+    .attr("dy", "-0.9em")
+    .attr("x", 8)
+    .text(d => d.data.label);
+
+  node.append("text")
+    .attr("dy", "0.32em")
+    .attr("x", d => d.children ? -9 : 9)
+    .attr("text-anchor", d => d.children ? "end" : "start")
+    .text(d => d.data.id.split("_").pop());
+
+  window.__selectVizNode = (id) => {
+    d3.selectAll(".node").classed("selected", false).classed("on-path", false);
+    d3.selectAll(".link").classed("on-path", false);
+    let cur = nodeById[id];
+    const chain = [];
+    while (cur) { chain.push(cur.id); cur = cur.parent ? nodeById[cur.parent] : null; }
+    chain.forEach(nid => {
+      d3.select(`#node-${CSS.escape(nid)}`).classed("on-path", true);
+      d3.select(`#link-${CSS.escape(nid)}`).classed("on-path", true);
+    });
+    d3.select(`#node-${CSS.escape(id)}`).classed("selected", true);
+  };
+
+  const realCount = Object.values(data.nodes).filter(n => !n.virtual).length;
+  const total = Object.values(data.nodes).length;
+  statsEl.textContent = `${realCount} clips across ${total} nodes`;
+}
+
+function selectNode(id) {
+  selectedId = id;
+  const n = nodeById[id];
+  window.__selectVizNode(id);
+
+  videoEl.src = n.video;
+  videoEl.style.display = "block";
+  placeholderEl.style.display = "none";
+  videoEl.play().catch(() => {});
+
+  const depth = id.split("_").length;
+  infoEl.innerHTML = `
+    <div class="id">${id}${n.label ? ` <span class="label">"${n.label}"</span>` : ""}</div>
+    <div class="stat-row"><span>Depth</span><span>${depth}</span></div>
+    <div class="stat-row"><span>Children</span><span>${n.children.length}</span></div>
+    <div class="stat-row"><span>Parent</span><span>${n.parent ?? "—"}</span></div>
+  `;
+
+  childrenEl.innerHTML = "";
+  if (n.children.length) {
+    const label = document.createElement("div");
+    label.style.cssText = "font-size:11px;color:var(--text-dim);margin-bottom:6px;";
+    label.textContent = "Branches from here:";
+    childrenEl.appendChild(label);
+    n.children.forEach(cid => {
+      const c = nodeById[cid];
+      const btn = document.createElement("button");
+      btn.textContent = `${cid.split("_").pop()} → ${cid}${c.virtual ? "  (no clip)" : ""}${c.label ? `  "${c.label}"` : ""}`;
+      btn.disabled = c.virtual && c.children.length === 0;
+      btn.onclick = () => {
+        if (!c.virtual) selectNode(cid);
+        else if (c.children.length) selectNode(c.children[0]);
+      };
+      childrenEl.appendChild(btn);
+    });
+  }
+}
+</script>
+</body>
+</html>
