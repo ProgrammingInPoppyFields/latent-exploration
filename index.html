@@ -128,14 +128,14 @@
     stroke-width: 2px;
   }
   .link.on-path {
-    stroke: var(--path);
+    stroke: var(--link-gradient, var(--path));
     stroke-width: 3px;
-    filter: drop-shadow(0 0 4px var(--path));
+    filter: drop-shadow(0 0 4px var(--link-glow-color, var(--path)));
   }
   .link.hover-path {
-    stroke: var(--node-real);
+    stroke: var(--link-gradient, var(--node-real));
     stroke-width: 3px;
-    filter: drop-shadow(0 0 5px var(--node-real));
+    filter: drop-shadow(0 0 5px var(--link-glow-color, var(--node-real)));
   }
 
   .node circle {
@@ -144,7 +144,7 @@
   }
   .node.real circle {
     fill: #101018;
-    stroke: var(--node-real);
+    stroke: var(--node-color, var(--node-real));
     cursor: pointer;
   }
   .node.virtual circle {
@@ -154,33 +154,33 @@
   }
   .node.on-path:not(.selected) circle,
   .node.hover-path:not(:hover) circle {
-    fill: var(--path);
-    stroke: var(--path);
-    filter: drop-shadow(0 0 6px var(--path));
+    fill: var(--node-color, var(--path));
+    stroke: var(--node-color, var(--path));
+    filter: drop-shadow(0 0 10px var(--node-color, var(--path))) drop-shadow(0 0 20px var(--node-color, var(--path)));
   }
   .node.selected circle,
   .node.real:hover circle {
-    fill: var(--current);
-    stroke: var(--current);
-    filter: drop-shadow(0 0 14px var(--current));
+    fill: var(--node-color, var(--current));
+    stroke: var(--node-color, var(--current));
+    filter: drop-shadow(0 0 20px var(--node-color, var(--current))) drop-shadow(0 0 38px var(--node-color, var(--current)));
   }
   .node.root.on-path circle,
   .node.root.hover-path circle {
-    fill: var(--current);
-    stroke: var(--current);
-    filter: drop-shadow(0 0 16px var(--current));
+    fill: var(--node-color, var(--current));
+    stroke: var(--node-color, var(--current));
+    filter: drop-shadow(0 0 22px var(--node-color, var(--current))) drop-shadow(0 0 42px var(--node-color, var(--current)));
   }
   .node.root circle {
     fill: none;
-    stroke: var(--root);
+    stroke: var(--node-color, var(--root));
     stroke-width: 4px;
     stroke-dasharray: none;
     cursor: pointer;
   }
   .node.root:hover circle,
   .node.root.active circle {
-    fill: var(--root);
-    filter: drop-shadow(0 0 18px var(--root)) drop-shadow(0 0 34px var(--root));
+    fill: var(--node-color, var(--root));
+    filter: drop-shadow(0 0 24px var(--node-color, var(--root))) drop-shadow(0 0 46px var(--node-color, var(--root)));
   }
 
   #sidebar {
@@ -511,6 +511,24 @@ function layoutRadial(root) {
   return availableRadius + innerRadius + 60; // total radius; root stays at local (0,0)
 }
 
+function nodePos(d) {
+  // Matches d3.linkRadial's internal pointRadial(angle, radius) exactly,
+  // so gradient endpoints line up with where the node actually renders.
+  return [d.y * Math.sin(d.x), -d.y * Math.cos(d.x)];
+}
+
+function nodeColor(data) {
+  return data.color || "#6ee7ff";
+}
+
+function mixHex(a, b) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const r = Math.round(((pa >> 16 & 255) + (pb >> 16 & 255)) / 2);
+  const gg = Math.round(((pa >> 8 & 255) + (pb >> 8 & 255)) / 2);
+  const bb = Math.round(((pa & 255) + (pb & 255)) / 2);
+  return `#${[r, gg, bb].map(x => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function draw() {
   g.selectAll("*").remove();
 
@@ -519,13 +537,32 @@ function draw() {
 
   const linkPath = d3.linkRadial().angle(d => d.x).radius(d => d.y);
   const nodeTransform = d => `rotate(${(d.x * 180 / Math.PI) - 90}) translate(${d.y},0)`;
+  const links = rootHierarchy.links();
+
+  const defs = g.append("defs");
+  defs.selectAll("linearGradient")
+    .data(links)
+    .join("linearGradient")
+    .attr("id", d => `link-grad-${d.target.data.id}`)
+    .attr("gradientUnits", "userSpaceOnUse")
+    .attr("x1", d => nodePos(d.source)[0])
+    .attr("y1", d => nodePos(d.source)[1])
+    .attr("x2", d => nodePos(d.target)[0])
+    .attr("y2", d => nodePos(d.target)[1])
+    .each(function (d) {
+      const grad = d3.select(this);
+      grad.append("stop").attr("offset", "0%").attr("stop-color", nodeColor(d.source.data));
+      grad.append("stop").attr("offset", "100%").attr("stop-color", nodeColor(d.target.data));
+    });
 
   g.append("g").selectAll("path")
-    .data(rootHierarchy.links())
+    .data(links)
     .join("path")
     .attr("class", "link")
     .attr("id", d => `link-${d.target.data.id}`)
-    .attr("d", linkPath);
+    .attr("d", linkPath)
+    .style("--link-gradient", d => `url(#link-grad-${d.target.data.id})`)
+    .style("--link-glow-color", d => mixHex(nodeColor(d.source.data), nodeColor(d.target.data)));
 
   const node = g.append("g").selectAll("g")
     .data(rootHierarchy.descendants())
@@ -533,6 +570,7 @@ function draw() {
     .attr("class", d => `node ${d.data.virtual ? "virtual" : "real"}${d.depth === 0 ? " root" : ""}`)
     .attr("id", d => `node-${d.data.id}`)
     .attr("transform", nodeTransform)
+    .style("--node-color", d => d.data.color || null)
     .on("click", (event, d) => {
       if (d.depth === 0) selectRoot();
       else if (!d.data.virtual) selectNode(d.data.id);
