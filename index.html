@@ -227,9 +227,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
   #video-box video, #video-box img {
     width: 100%; height: auto; display: none;
+  }
+  #video-progress {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    display: none;
+  }
+  #video-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
   }
   #video-placeholder {
     color: var(--text-dim);
@@ -352,9 +365,10 @@
   <div id="sidebar">
     <h2>Now Playing</h2>
     <div id="video-box">
-      <video id="video" controls loop playsinline></video>
+      <video id="video" loop playsinline></video>
       <img id="origin-img" src="origin_images/1.png" alt="Starting image" />
       <div id="video-placeholder">Select a node to play its clip</div>
+      <div id="video-progress"><div id="video-progress-fill"></div></div>
     </div>
     <div id="node-info"></div>
     <div id="children-list"></div>
@@ -365,6 +379,12 @@
 const videoEl = document.getElementById("video");
 const originImgEl = document.getElementById("origin-img");
 const placeholderEl = document.getElementById("video-placeholder");
+const progressEl = document.getElementById("video-progress");
+const progressFillEl = document.getElementById("video-progress-fill");
+
+videoEl.addEventListener("timeupdate", () => {
+  if (videoEl.duration) progressFillEl.style.width = `${(videoEl.currentTime / videoEl.duration) * 100}%`;
+});
 const infoEl = document.getElementById("node-info");
 const childrenEl = document.getElementById("children-list");
 const statsEl = document.getElementById("stats-badge");
@@ -430,6 +450,7 @@ function nodeRadius(d) {
 
 function showOriginImage() {
   videoEl.style.display = "none";
+  progressEl.style.display = "none";
   placeholderEl.style.display = "none";
   originImgEl.style.display = "block";
 }
@@ -439,6 +460,7 @@ function hideOriginImage() {
   originImgEl.style.display = "none";
   if (selectedId) {
     videoEl.style.display = "block";
+    progressEl.style.display = "block";
     videoEl.play().catch(() => {});
   } else {
     placeholderEl.style.display = "block";
@@ -614,6 +636,8 @@ function selectNode(id) {
 
   videoEl.src = n.video;
   videoEl.style.display = "block";
+  progressEl.style.display = "block";
+  progressFillEl.style.width = "0%";
   placeholderEl.style.display = "none";
   videoEl.play().catch(() => {});
 
