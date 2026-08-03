@@ -13,7 +13,7 @@ import re
 import shutil
 from pathlib import Path
 
-SOURCE_DIR = Path("/Users/helen/Downloads/Latent Exploration - Master")
+SOURCE_DIR = Path("/Users/helen/Downloads/Latent Exploration - Workspace/ORIGIN - 0")
 REPO_DIR = Path(__file__).resolve().parent.parent
 VIDEOS_OUT = REPO_DIR / "videos"
 TREE_JSON_OUT = REPO_DIR / "tree.json"
